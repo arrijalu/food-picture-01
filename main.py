@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Entry for the make.fun "food-picture-01" image competition.
+"""make.fun competition entry: "food-picture-01".
 
-Ships the image bundled next to this file to the grader's writable /output
-directory. Standard library only: no network access, no third-party imports.
+Ships the ramen image bundled next to this file to the grader's writable
+/output directory, so the grader finds it at /output/entry.png.
+Standard library only: no network access, no third-party imports.
 """
 
 import os
@@ -20,24 +21,20 @@ def is_image(data):
     return data.startswith(IMAGE_SIGNATURES)
 
 
-def source_path():
-    """Absolute path of the bundled image, resolved from this file."""
+def entry_path():
+    """Absolute path of entry.png, resolved from this file via __file__."""
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), IMAGE_NAME)
 
 
-def destination_paths():
-    """Candidate destinations, in order of importance."""
-    cwd = os.getcwd()
-    candidates = [
-        os.path.join(os.sep, "output", IMAGE_NAME),
-        os.path.join(cwd, IMAGE_NAME),
-        os.path.join(cwd, "output", IMAGE_NAME),
-    ]
-    ordered = []
-    for path in candidates:
-        if path not in ordered:
-            ordered.append(path)
-    return ordered
+_DESTINATION_CANDIDATES = (
+    # /output must be tried first: that is the path the grader reads the entry from.
+    os.path.join(os.sep, "output", IMAGE_NAME),
+    os.path.join(os.getcwd(), IMAGE_NAME),
+    os.path.join(os.getcwd(), "output", IMAGE_NAME),
+)
+
+# Same order as _DESTINATION_CANDIDATES, duplicates dropped.
+DESTINATIONS = tuple(dict.fromkeys(_DESTINATION_CANDIDATES))
 
 
 def write_payload(path, data):
@@ -58,7 +55,7 @@ def write_payload(path, data):
 
 def main():
     try:
-        with open(source_path(), "rb") as handle:
+        with open(entry_path(), "rb") as handle:
             data = handle.read()
     except OSError as exc:
         sys.stderr.write("cannot read %s: %s\n" % (IMAGE_NAME, exc))
@@ -68,7 +65,7 @@ def main():
         sys.stderr.write("%s is not a PNG or JPEG image\n" % IMAGE_NAME)
         return 1
 
-    written = [path for path in destination_paths() if write_payload(path, data)]
+    written = [path for path in DESTINATIONS if write_payload(path, data)]
     if not written:
         sys.stderr.write("no writable destination for %s\n" % IMAGE_NAME)
         return 1
